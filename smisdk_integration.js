@@ -1,9 +1,9 @@
 const path = require('path');
 const fs = require('fs');
-const glob = require('glob');
-const xml = require('xmldoc');
-const DOMParser = require('xmldom').DOMParser;
-const XMLSerializer = require('xmldom').XMLSerializer;
+// const glob = require('glob');
+// const xml = require('xmldoc');
+// const DOMParser = require('xmldom').DOMParser;
+// const XMLSerializer = require('xmldom').XMLSerializer;
 
 console.log("postInstall scrpit called");
 
