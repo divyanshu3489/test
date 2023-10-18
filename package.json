@@ -19,7 +19,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://bitbucket.org/datami-br/sd-react-native-smisdk-plugin-project.git"
+    "url": "https://github.com/divyanshu3489/test.git"
   },
   "peerDependencies": {
     "patch-package": "^6.2.2",
@@ -35,7 +35,7 @@
   },
   "author": "Datami inc",
   "license": "Datami mobile solutions",
-  "homepage": "https://bitbucket.org/datami-br/sd-react-native-smisdk-plugin-project",
+  "homepage": "https://bitbucket.org/datami/sd-react-native-smisdk-plugin-project",
   "dependencies": {
     "xmldoc": "1.3.0"
   }
