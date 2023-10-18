@@ -15,8 +15,7 @@
     "postInstall.sh"
   ],
   "scripts": {
-    "postinstall": "postInstall.sh",
-    "postinstall": "patch-package"
+    "postinstall": "postInstall.sh"
   },
   "repository": {
     "type": "git",
@@ -38,6 +37,6 @@
   "license": "Datami mobile solutions",
   "homepage": "https://bitbucket.org/datami-br/sd-react-native-smisdk-plugin-project",
   "dependencies": {
-    "xmldom": "^0.7.0"
+    "@xmldom/xmldom": "^0.7.0"
   }
 }
