@@ -37,6 +37,6 @@
   "license": "Datami mobile solutions",
   "homepage": "https://bitbucket.org/datami-br/sd-react-native-smisdk-plugin-project",
   "dependencies": {
-    "@xmldom/xmldom": "^0.7.0"
+    "xmldoc": "1.3.0"
   }
 }
