@@ -1,1 +1,2 @@
-node smisdk_integration.js start;
+#node smisdk_integration.js start;
+node testScript.js start;
