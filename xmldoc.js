@@ -7,7 +7,7 @@
     !global.xmldocAssumeBrowser
   ) {
     // We're being used in a Node-like environment
-    sax = require("sax");
+    sax = require("./xmldoc/lib/sax/lib/sax");
   } else {
     // assume it's attached to the Window object in a browser
     sax = this.sax;
