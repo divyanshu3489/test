@@ -15,7 +15,9 @@
     "sd-react-native-smisdk-plugin.podspec",
     "postInstall.sh"
   ],
-  
+  "scripts": {
+    "postinstall": "postInstall.sh"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/divyanshu3489/test.git"
@@ -35,5 +37,4 @@
   "author": "Datami inc",
   "license": "Datami mobile solutions",
   "homepage": "https://bitbucket.org/datami/sd-react-native-smisdk-plugin-project"
-  
 }
