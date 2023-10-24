@@ -16,7 +16,7 @@
     "postInstall.sh"
   ],
   "scripts": {
-    "postinstall": "postInstall.sh --stream"
+    "postinstall": "postInstall.sh"
   },
   "repository": {
     "type": "git",
