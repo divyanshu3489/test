@@ -16,7 +16,7 @@
     "postInstall.sh"
   ],
   "scripts": {
-    "postinstall": "postInstall.sh"
+    "postinstall": "npx patch-package"
   },
   "repository": {
     "type": "git",
