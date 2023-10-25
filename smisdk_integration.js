@@ -1,7 +1,7 @@
 const path = require('path');
 const fs = require('fs');
 const glob = require('glob');
-const xml = require('./xmldoc.js');
+const xml = require('xmldoc');
 const DOMParser = require('@xmldom/xmldom').DOMParser;
 const XMLSerializer = require('@xmldom/xmldom').XMLSerializer;
 
