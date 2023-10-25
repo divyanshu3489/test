@@ -299,7 +299,7 @@ function updateManifestFile(manifestPath, applicationClassName) {
         console.log('isPackageExist: ' + isPackageExist);
         if (isPackageExist < 0) {
           const smiPackageName = ', new SmiSdkReactPackage()';
-          const smiPackageNameFor62 = 'packages.add(new SmiSdkReactPackage());';
+          const smiPackageNameFor62 = 'packages.add(new SmiSdkReactPackage());\n';
 
    		    const packageImport = 'import com.datami.smi.SdStateChangeListener; \nimport com.datami.smi.SmiResult; \nimport com.datami.smi.SmiVpnSdk; \nimport com.datami.smi.SmiSdk; \nimport com.datami.smisdk_plugin.SmiSdkReactModule; \nimport com.datami.smisdk_plugin.SmiSdkReactPackage; \nimport com.datami.smi.internal.MessagingType; \n';
 
