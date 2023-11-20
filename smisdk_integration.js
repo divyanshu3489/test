@@ -19,12 +19,44 @@ function findAndroidAppFolder(folder) {
   return null;
 };
 
+//Find and Read app level build.gradle file
+function findGradleFile(folder) {
+  console.log("find app level build.gradle.......");
+  const gradlePath = glob.sync(path.join('**', 'build.gradle'), {
+    cwd: folder,
+    ignore: ['node_modules/**', '**/build/**', 'Examples/**', 'examples/**', '**/debug/**'],
+  })[0]; 
+
+  return gradlePath ? path.join(folder, gradlePath) : null;
+};
+
+function readGradle(gradlePath) {
+  const gradleFile = fs.readFileSync(gradlePath, 'utf8');
+  let packageId = '';
+  gradleFile.split(/\r?\n/).forEach(line =>  {
+    if(line.includes('namespace')){
+      // console.log(`Line from file: ${line}`);
+      let line1 = line.trim();
+      packageId = line1.split(" ");
+    }  
+    else if(line.includes('applicationId')) {
+      // console.log(`Line from file: ${line}`);
+      let line1 = line.trim();
+      packageId = line1.split(" ");
+    }
+  });
+  // console.log(packageId[1].slice(1,-1));
+  return packageId[1].slice(1,-1);
+};
+
+
+//Find and read AndroidManifest.xml file
 function findManifest(folder) {
   console.log("findManifest.......");
   const manifestPath = glob.sync(path.join('**', 'AndroidManifest.xml'), {
     cwd: folder,
     ignore: ['node_modules/**', '**/build/**', 'Examples/**', 'examples/**', '**/debug/**'],
-  })[0];
+  })[0]; 
 
   return manifestPath ? path.join(folder, manifestPath) : null;
 };
@@ -240,6 +272,9 @@ function updateManifestFile(manifestPath, applicationClassName) {
 
       const manifestPath = findManifest(sourceDir);
       console.log('manifestPath: ' + manifestPath);
+      
+      const gradlePath = findGradleFile(sourceDir);
+      console.log('gradlePath: ' + gradlePath);
 
   if (!manifestPath) {
     return null;
@@ -285,19 +320,26 @@ function updateManifestFile(manifestPath, applicationClassName) {
         console.log('applicationClassName after:' + applicationClassName);
 
         const manifest = readManifest(manifestPath);
-        const packageName = getPackageName(manifest);
-        // console.log('packageName: ' + packageName);
-        const packageFolder = packageName.replace(/\./g, path.sep);
+        // console.log('manifest', manifest);
+        let packageName = '';
+        packageName = getPackageName(manifest);
+
+        if(!packageName){
+          packageName = readGradle(gradlePath);
+        }
+        
+        console.log('packageName: ' + packageName);
+        const packageFolder = packageName. replace(/\./g, path.sep);
         // console.log('packageFolder: ' + packageFolder);
         const mainApplicationPath = path.join(sourceDir,
           `src/main/java/${packageFolder}/${applicationClassName}.java`);
-        console.log('mainApplicationPath: ' + mainApplicationPath);
+        console.log('mainApplicationPath: ' + mainApplicationPath); 
 
         //Read application class
         const appFile = fs.readFileSync(mainApplicationPath, 'utf8');
         var isPackageExist = appFile.search('SmiSdkReactPackage');
         console.log('isPackageExist: ' + isPackageExist);
-        if (isPackageExist < 0) {
+        if (isPackageExist < 0) { 
           const smiPackageName = ', new SmiSdkReactPackage()';
           const smiPackageNameFor62 = 'packages.add(new SmiSdkReactPackage());\n';
 
