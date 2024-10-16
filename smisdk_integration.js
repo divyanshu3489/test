@@ -5,8 +5,6 @@ const xml = require('xmldoc');
 const DOMParser = require('@xmldom/xmldom').DOMParser;
 const XMLSerializer = require('@xmldom/xmldom').XMLSerializer;
 
-console.log("postInstall script called");
-
 function findAndroidAppFolder(folder) {
   const flat = 'android';
   const nested = path.join('android', 'app');
@@ -21,7 +19,6 @@ function findAndroidAppFolder(folder) {
 
 //Find and Read app level build.gradle file
 function findGradleFile(folder) {
-  console.log("find app level build.gradle.......");
   const gradlePath = glob.sync(path.join('**', 'build.gradle'), {
     cwd: folder,
     ignore: ['node_modules/**', '**/build/**', 'Examples/**', 'examples/**', '**/debug/**'],
@@ -52,7 +49,6 @@ function readGradle(gradlePath) {
 
 //Find and read AndroidManifest.xml file
 function findManifest(folder) {
-  console.log("findManifest.......");
   const manifestPath = glob.sync(path.join('**', 'AndroidManifest.xml'), {
     cwd: folder,
     ignore: ['node_modules/**', '**/build/**', 'Examples/**', 'examples/**', '**/debug/**'],
@@ -68,16 +64,46 @@ function readManifest(manifestPath) {
 const getPackageName = (manifest) => manifest.attr.package;
 
 function getApplicationClassName(folder) {
+  
+  //Getting all java files from folder
   const files = glob.sync('**/*.java', {
     cwd: folder
   });
+
+  //Folder didn't have java files
+  if(files.length === 0){
+    const files = glob.sync('**/*.kt', {
+      cwd: folder
+    });
+  
+    const packages = files
+      .map(filePath => fs.readFileSync(path.join(folder, filePath), 'utf8'))
+      .map(file => file.match(/class\s+(\w+)\s*:\s*Application\(\)\s*,\s*ReactApplication/))
+      .filter(match => match);
+
+      const extension = path.extname(files[0]);
+
+      const classDetails = packages.length ? { 
+        "className" : packages[0][1], 
+        "fileExtension": extension 
+      } : null
+  
+      return classDetails;
+  }
 
   const packages = files
     .map(filePath => fs.readFileSync(path.join(folder, filePath), 'utf8'))
     .map(file => file.match(/class (.*) implements (.*)ReactApplication/))
     .filter(match => match);
 
-    return packages.length ? packages[0][1] : null;
+    const extension = path.extname(files[0]);
+
+      const classDetails = packages.length ? { 
+        "className" : packages[0][1], 
+        "fileExtension": extension 
+      } : null
+  
+      return classDetails;
   };
 
    // String append
@@ -86,7 +112,6 @@ function getApplicationClassName(folder) {
 }
 
 function findStringsXml(folder) {
-  console.log('findStringsXml()');
   const stringsXmlPath = glob.sync(path.join('**', 'strings.xml'), {
     cwd: folder,
     ignore: ['node_modules/**', '**/build/**', 'Examples/**', 'examples/**', '**/debug/**'],
@@ -128,16 +153,13 @@ function updateManifestFile(manifestPath, applicationClassName) {
   var attrApplication = manifestXmlDoc.getElementsByTagName("application");
   // console.log('attrApplication:' + attrApplication[0]);
   const attrApplicationLength = attrApplication[0].attributes.length;
-  console.log('attrApplicationLength:' + attrApplicationLength);
   // insert/update android:name attribute to manifest
 
       var i;
    	for (i = 0; i < attrApplicationLength; i++) {
        	var attrNodeName = attrApplication[0].attributes[i].nodeName;
-       	console.log('attrNodeName:' + attrNodeName);
        	if(attrNodeName.search('android:name')>=0){
        		var attrNodeValue = attrApplication[0].attributes[i].nodeValue;
-       		console.log('attrNodeValue:' + attrNodeValue);
        		if(attrNodeValue === ('.'+applicationClassName)){
        		   console.log('app class name matched');
        		}else{
@@ -201,7 +223,6 @@ function updateManifestFile(manifestPath, applicationClassName) {
   for(var i =0; i<nodeNetworkConfig.length; i++){
     if(nodeNetworkConfig[i].nodeType ==1){
       var domainName = nodeNetworkConfig[i].childNodes[0].nodeValue;
-      console.log("Name : "+domainName);
       if(null != domainName && domainName.localeCompare('cloudmi.datami.com') == 0){
         available = true;
         break;
@@ -265,16 +286,13 @@ function updateManifestFile(manifestPath, applicationClassName) {
       }
 
       const sourceDir = path.join(folder, androidAppFolder);
-      console.log('sourceDir: ' + sourceDir);
 
       //update network security config
       // updateNetworkConfig(sourceDir+'/src/main/res/xml/network_security_config.xml');
 
       const manifestPath = findManifest(sourceDir);
-      console.log('manifestPath: ' + manifestPath);
       
       const gradlePath = findGradleFile(sourceDir);
-      console.log('gradlePath: ' + gradlePath);
 
   if (!manifestPath) {
     return null;
@@ -282,8 +300,10 @@ function updateManifestFile(manifestPath, applicationClassName) {
 
   // check app class Availability
 
-  var applicationClassName = getApplicationClassName(sourceDir + '/src/main')
-  console.log('applicationClassName before:' + applicationClassName);
+  const applicationClassDetails = getApplicationClassName(sourceDir + '/src/main')
+  var applicationClassName = applicationClassDetails.className;
+  var fileExtension = applicationClassDetails.fileExtension;
+
   if (applicationClassName == null) {
     // Application class not available. 
     //Copy application class and update manifest with application name
@@ -308,7 +328,6 @@ function updateManifestFile(manifestPath, applicationClassName) {
 
     // update configuration file
     const stringsXmlPath = findStringsXml(sourceDir);
-    console.log('stringsXmlPath: ' + stringsXmlPath);
     if (stringsXmlPath != null) {
       updateConfigurationFile(stringsXmlPath);
     }
@@ -317,7 +336,6 @@ function updateManifestFile(manifestPath, applicationClassName) {
       var applicationClassNameSplit = applicationClassName.split(' ');
       if (applicationClassNameSplit.length > 0) {
         applicationClassName = applicationClassNameSplit[0];
-        console.log('applicationClassName after:' + applicationClassName);
 
         const manifest = readManifest(manifestPath);
         // console.log('manifest', manifest);
@@ -331,121 +349,242 @@ function updateManifestFile(manifestPath, applicationClassName) {
         console.log('packageName: ' + packageName);
         const packageFolder = packageName. replace(/\./g, path.sep);
         // console.log('packageFolder: ' + packageFolder);
-        const mainApplicationPath = path.join(sourceDir,
-          `src/main/java/${packageFolder}/${applicationClassName}.java`);
-        console.log('mainApplicationPath: ' + mainApplicationPath); 
+
+        let mainApplicationPath = '';
+        if(fileExtension == ".java"){
+          mainApplicationPath = path.join(sourceDir,
+            `src/main/java/${packageFolder}/${applicationClassName}.java`);
+        } else if(fileExtension == ".kt"){
+          mainApplicationPath = path.join(sourceDir,
+            `src/main/java/${packageFolder}/${applicationClassName}.kt`);
+        }
 
         //Read application class
         const appFile = fs.readFileSync(mainApplicationPath, 'utf8');
+
         var isPackageExist = appFile.search('SmiSdkReactPackage');
-        console.log('isPackageExist: ' + isPackageExist);
         if (isPackageExist < 0) { 
-          const smiPackageName = ', new SmiSdkReactPackage()';
-          const smiPackageNameFor62 = 'packages.add(new SmiSdkReactPackage());\n';
+          if(fileExtension === ".java") {
+            const smiPackageName = ', new SmiSdkReactPackage()';
+            const smiPackageNameFor62 = 'packages.add(new SmiSdkReactPackage());\n';
 
-   		    const packageImport = 'import com.datami.smi.SdStateChangeListener; \nimport com.datami.smi.SmiResult; \nimport com.datami.smi.SmiVpnSdk; \nimport com.datami.smi.SmiSdk; \nimport com.datami.smisdk_plugin.SmiSdkReactModule; \nimport com.datami.smisdk_plugin.SmiSdkReactPackage; \nimport com.datami.smi.internal.MessagingType; \n';
+            const packageImport = 'import com.datami.smi.SdStateChangeListener; \nimport com.datami.smi.SmiResult; \nimport com.datami.smi.SmiVpnSdk; \nimport com.datami.smi.SmiSdk; \nimport com.datami.smisdk_plugin.SmiSdkReactModule; \nimport com.datami.smisdk_plugin.SmiSdkReactPackage; \nimport com.datami.smi.internal.MessagingType; \n';
 
-   		 	  const initSponsoredDataAPI = '\nSmiVpnSdk.initSponsoredData(getResources().getString(R.string.smisdk_apikey), \nthis, R.mipmap.ic_launcher, dmiMessaging, dmiStartVpn, 0, dmiControlledVpn);';
+            const initSponsoredDataAPI = '\nSmiVpnSdk.initSponsoredData(getResources().getString(R.string.smisdk_apikey), \nthis, R.mipmap.ic_launcher, dmiMessaging, dmiStartVpn, 0, dmiControlledVpn);';
 
-          const stringParse = '\nboolean dmiUserMessaging = getResources().getBoolean(R.bool.smisdk_show_messaging);  \nboolean dmiStartVpn = getResources().getBoolean(R.bool.smisdk_start_vpn);  \nboolean dmiControlledVpn = getResources().getBoolean(R.bool.smisdk_controlled_vpn);  \nMessagingType dmiMessaging = MessagingType.NONE;   \nif(dmiUserMessaging){ \n   dmiMessaging = MessagingType.BOTH; \n }\n';
+            const stringParse = '\nboolean dmiUserMessaging = getResources().getBoolean(R.bool.smisdk_show_messaging);  \nboolean dmiStartVpn = getResources().getBoolean(R.bool.smisdk_start_vpn);  \nboolean dmiControlledVpn = getResources().getBoolean(R.bool.smisdk_controlled_vpn);  \nMessagingType dmiMessaging = MessagingType.NONE;   \nif(dmiUserMessaging){ \n   dmiMessaging = MessagingType.BOTH; \n }\n';
 
-          const onCreateMethod = '\n @Override \n public void onCreate() { \n  super.onCreate();' + stringParse + initSponsoredDataAPI + ' \n}';
+            const onCreateMethod = '\n @Override \n public void onCreate() { \n  super.onCreate();' + stringParse + initSponsoredDataAPI + ' \n}';
 
-          const stateChangeListnerStr = ' SdStateChangeListener, ';
+            const stateChangeListnerStr = ' SdStateChangeListener, ';
 
-          const onChangeMethod = '\n@Override \n public void onChange(SmiResult smiResult) {\n SmiSdkReactModule.setSmiResultToModule(smiResult);\n}';
+            const onChangeMethod = '\n@Override \n public void onChange(SmiResult smiResult) {\n SmiSdkReactModule.setSmiResultToModule(smiResult);\n}';
 
-          var intMainPackageIndex = appFile.search("new MainReactPackage()")
-          console.log('intMainPackageIndex: ' + intMainPackageIndex);
+            var intMainPackageIndex = appFile.search("new MainReactPackage()")
 
-          const packageImportArray = 'import java.util.Arrays; \n';
-          var intMainPackageIndexLatest = appFile.search("return packages;")
-          console.log('intMainPackageIndexLatest: ' + intMainPackageIndexLatest);
+            const packageImportArray = 'import java.util.Arrays; \n';
+            var intMainPackageIndexLatest = appFile.search("return packages;")
 
-          if (intMainPackageIndex > 0) {
-            // add package name
-            var appfileNew = insert(appFile, intMainPackageIndex + 22, smiPackageName);
-            // add import
-            var intImportIndex = appFile.search("import")
-            appfileNew = insert(appfileNew, intImportIndex, packageImport);
+            if (intMainPackageIndex > 0) {
+              // add package name
+              var appfileNew = insert(appFile, intMainPackageIndex + 22, smiPackageName);
+              // add import
+              var intImportIndex = appFile.search("import")
+              appfileNew = insert(appfileNew, intImportIndex, packageImport);
 
-            //add sdStateChangeListner
-            var implementsIndex = appfileNew.search("implements");
-            if (implementsIndex > 0) {
-              appfileNew = insert(appfileNew, implementsIndex + 10, stateChangeListnerStr);
-            }
-            // add initSponsoredData Api
-            var intSuperIndex = appfileNew.search("super.onCreate()");
-            console.log('intSuperIndex: ' + intSuperIndex);
-            if (intSuperIndex > 0) {
-              appfileNew = insert(appfileNew, intSuperIndex + 17, stringParse + initSponsoredDataAPI);
+              //add sdStateChangeListner
+              var implementsIndex = appfileNew.search("implements");
+              if (implementsIndex > 0) {
+                appfileNew = insert(appfileNew, implementsIndex + 10, stateChangeListnerStr);
+              }
+              // add initSponsoredData Api
+              var intSuperIndex = appfileNew.search("super.onCreate()");
+              if (intSuperIndex > 0) {
+                appfileNew = insert(appfileNew, intSuperIndex + 17, stringParse + initSponsoredDataAPI);
+              } else {
+                // add onCreate method with initSponsoredData API
+                var n = appfileNew.lastIndexOf("}");
+                console.log('lastIndexOf }: ' + n);
+                appfileNew = insert(appfileNew, n - 1, onCreateMethod);
+              }
+
+              // add onChange method
+              var lastchar = appfileNew.lastIndexOf("}");
+              console.log('lastchar: ' + n);
+
+              appfileNew = insert(appfileNew, lastchar - 1, onChangeMethod);
+
+              fs.writeFileSync(mainApplicationPath, appfileNew, 'utf8');
+
+              // const appFileNew2 = fs.readFileSync(mainApplicationPath, 'utf8')
+              updateManifestFile(manifestPath, applicationClassName);
+              // update configuration file
+              const stringsXmlPath = findStringsXml(sourceDir);
+              if (stringsXmlPath != null) {
+                updateConfigurationFile(stringsXmlPath);
+              }
+
+            } else if (intMainPackageIndexLatest > 0) {
+              // add package name
+              var appfileNew = insert(appFile, intMainPackageIndexLatest, smiPackageNameFor62);
+              // add import
+              var intImportIndex = appFile.search("import")
+              appfileNew = insert(appfileNew, intImportIndex, packageImport);
+              appfileNew = insert(appfileNew, intImportIndex, packageImportArray);
+
+              //add sdStateChangeListner
+              var implementsIndex = appfileNew.search("implements");
+              if (implementsIndex > 0) {
+                appfileNew = insert(appfileNew, implementsIndex + 10, stateChangeListnerStr);
+              }
+              // add initSponsoredData Api
+              var intSuperIndex = appfileNew.search("super.onCreate()");
+              if (intSuperIndex > 0) {
+                appfileNew = insert(appfileNew, intSuperIndex + 17, stringParse + initSponsoredDataAPI);
+              } else {
+                // add onCreate method with initSponsoredData API
+                var n = appfileNew.lastIndexOf("}");
+                console.log('lastIndexOf }: ' + n);
+                appfileNew = insert(appfileNew, n - 1, onCreateMethod);
+              }
+
+              // add onChange method
+              var lastchar = appfileNew.lastIndexOf("}");
+              console.log('lastchar: ' + n);
+
+              appfileNew = insert(appfileNew, lastchar - 1, onChangeMethod);
+
+              fs.writeFileSync(mainApplicationPath, appfileNew, 'utf8');
+
+              // const appFileNew2 = fs.readFileSync(mainApplicationPath, 'utf8')
+              updateManifestFile(manifestPath, applicationClassName);
+              // update configuration file
+              const stringsXmlPath = findStringsXml(sourceDir);
+              if (stringsXmlPath != null) {
+                updateConfigurationFile(stringsXmlPath);
+              }
             } else {
-              // add onCreate method with initSponsoredData API
-              var n = appfileNew.lastIndexOf("}");
-              console.log('lastIndexOf }: ' + n);
-              appfileNew = insert(appfileNew, n - 1, onCreateMethod);
+              console.log('Error MainReactPackage does not exist.');
             }
+          } else if(fileExtension === ".kt"){
+            const smiPackageName = ', new SmiSdkReactPackage()';
+            const smiPackageNameFor73 = 'packages.add(new SmiSdkReactPackage());\n';
+            const smiPackageNameAbove74 = '\nadd(SmiSdkReactPackage());\n';
 
-            // add onChange method
-            var lastchar = appfileNew.lastIndexOf("}");
-            console.log('lastchar: ' + n);
+            const packageImport = 'import com.datami.smi.SdStateChangeListener \nimport com.datami.smi.SmiResult \nimport com.datami.smi.SmiVpnSdk \nimport com.datami.smi.SmiSdk \nimport com.datami.smisdk_plugin.SmiSdkReactModule \nimport com.datami.smisdk_plugin.SmiSdkReactPackage \nimport com.datami.smi.internal.MessagingType \n';
 
-            appfileNew = insert(appfileNew, lastchar - 1, onChangeMethod);
+            const initSponsoredDataAPI = '\nSmiVpnSdk.initSponsoredData(resources.getString(R.string.smisdk_apikey), \nthis, R.mipmap.ic_launcher, dmiMessaging, dmiStartVpn, 0, dmiControlledVpn)\n';
 
-            fs.writeFileSync(mainApplicationPath, appfileNew, 'utf8');
+            const stringParse = '\nval dmiUserMessaging = resources.getBoolean(R.bool.smisdk_show_messaging)  \nval dmiStartVpn = resources.getBoolean(R.bool.smisdk_start_vpn);  \nval dmiControlledVpn = resources.getBoolean(R.bool.smisdk_controlled_vpn);  \nval dmiMessaging = MessagingType.NONE;   \nif(dmiUserMessaging){ \n   dmiMessaging = MessagingType.BOTH; \n }\n';
 
-            // const appFileNew2 = fs.readFileSync(mainApplicationPath, 'utf8')
-            updateManifestFile(manifestPath, applicationClassName);
-            // update configuration file
-            const stringsXmlPath = findStringsXml(sourceDir);
-            console.log('stringsXmlPath: ' + stringsXmlPath);
-            if (stringsXmlPath != null) {
-              updateConfigurationFile(stringsXmlPath);
-            }
+            const onCreateMethod = '\n override fun onCreate() { \n  super.onCreate()' + stringParse + initSponsoredDataAPI + ' \n}';
+           
+            const stateChangeListnerStr = ', SdStateChangeListener';
 
-          } else if (intMainPackageIndexLatest > 0) {
-            // add package name
-            var appfileNew = insert(appFile, intMainPackageIndexLatest, smiPackageNameFor62);
-            // add import
-            var intImportIndex = appFile.search("import")
-            appfileNew = insert(appfileNew, intImportIndex, packageImport);
-            appfileNew = insert(appfileNew, intImportIndex, packageImportArray);
+            const onChangeMethod = '\noverride fun onChange(smiResult: SmiResult) {\n SmiSdkReactModule.setSmiResultToModule(smiResult)\n}';
 
-            //add sdStateChangeListner
-            var implementsIndex = appfileNew.search("implements");
-            if (implementsIndex > 0) {
-              appfileNew = insert(appfileNew, implementsIndex + 10, stateChangeListnerStr);
-            }
-            // add initSponsoredData Api
-            var intSuperIndex = appfileNew.search("super.onCreate()");
-            console.log('intSuperIndex: ' + intSuperIndex);
-            if (intSuperIndex > 0) {
-              appfileNew = insert(appfileNew, intSuperIndex + 17, stringParse + initSponsoredDataAPI);
+            var intMainPackageIndex = appFile.search("new MainReactPackage()")
+
+            //For React native 0.73
+            const regexFor073 = /return PackageList\(this\)\.packages/;
+            var intMainPackageIndexFor073 = appFile.search(regexFor073);
+
+            //For React Native above 0.73
+            const regexAbove073 = /PackageList\(this\)\.packages\.apply/;
+            const searchTextAbove073 = "PackageList(this).packages.apply {";
+            var intMainPackageIndexAbove073 = appFile.search(regexAbove073);
+
+            if (intMainPackageIndex > 0) {
+              // add package name
+              var appfileNew = insert(appFile, intMainPackageIndex + 22, smiPackageName);
+              // add import
+              var intImportIndex = appFile.search("import")
+              appfileNew = insert(appfileNew, intImportIndex, packageImport);
+
+              //add sdStateChangeListner
+              var implementsIndex = appfileNew.search("implements");
+              if (implementsIndex > 0) {
+                appfileNew = insert(appfileNew, implementsIndex + 10, stateChangeListnerStr);
+              }
+              // add initSponsoredData Api
+              var intSuperIndex = appfileNew.search("super.onCreate()");
+              if (intSuperIndex > 0) {
+                appfileNew = insert(appfileNew, intSuperIndex + 17, stringParse + initSponsoredDataAPI);
+              } else {
+                // add onCreate method with initSponsoredData API
+                var n = appfileNew.lastIndexOf("}");
+                console.log('lastIndexOf }: ' + n);
+                appfileNew = insert(appfileNew, n - 1, onCreateMethod);
+              }
+
+              // add onChange method
+              var lastchar = appfileNew.lastIndexOf("}");
+              console.log('lastchar: ' + n);
+
+              appfileNew = insert(appfileNew, lastchar - 1, onChangeMethod);
+
+              fs.writeFileSync(mainApplicationPath, appfileNew, 'utf8');
+
+              // const appFileNew2 = fs.readFileSync(mainApplicationPath, 'utf8')
+              updateManifestFile(manifestPath, applicationClassName);
+              // update configuration file
+              const stringsXmlPath = findStringsXml(sourceDir);
+              if (stringsXmlPath != null) {
+                updateConfigurationFile(stringsXmlPath);
+              }
+
+            } else if (intMainPackageIndexFor073 > 0 || intMainPackageIndexAbove073 > 0) {
+
+              // add package name
+              var appfileNew = '';
+              if(intMainPackageIndexFor073 > 0){
+                appfileNew = insert(appFile, intMainPackageIndexFor073, smiPackageNameFor73);
+              } else if(intMainPackageIndexAbove073 > 0) {
+                appfileNew = insert(appFile, intMainPackageIndexAbove073 + searchTextAbove073.length, smiPackageNameAbove74);
+              }
+
+              // add import
+              var intImportIndex = appFile.search("import")
+              appfileNew = insert(appfileNew, intImportIndex, packageImport);
+
+              //add sdStateChangeListner
+              const regex = /Application\(\)/;
+              const searchText = "Application()";
+              var implementsIndex = appfileNew.search(regex);
+
+              if (implementsIndex > 0) {
+                appfileNew = insert(appfileNew, implementsIndex + searchText.length, stateChangeListnerStr);
+              }
+
+              // add initSponsoredData Api
+              var intSuperIndex = appfileNew.search("super.onCreate()");
+              if (intSuperIndex > 0) {
+                appfileNew = insert(appfileNew, intSuperIndex + 17, stringParse + initSponsoredDataAPI);
+              } else {
+                // add onCreate method with initSponsoredData API
+                var n = appfileNew.lastIndexOf("}");
+                console.log('lastIndexOf }: ' + n);
+                appfileNew = insert(appfileNew, n - 1, onCreateMethod);
+              }
+
+              // add onChange method
+              var lastchar = appfileNew.lastIndexOf("}");
+              console.log('lastchar: ' + n);
+
+              appfileNew = insert(appfileNew, lastchar - 1, onChangeMethod);
+
+              fs.writeFileSync(mainApplicationPath, appfileNew, 'utf8');
+
+              // const appFileNew2 = fs.readFileSync(mainApplicationPath, 'utf8')
+              updateManifestFile(manifestPath, applicationClassName);
+              // update configuration file
+              const stringsXmlPath = findStringsXml(sourceDir);
+              if (stringsXmlPath != null) {
+                updateConfigurationFile(stringsXmlPath);
+              }
             } else {
-              // add onCreate method with initSponsoredData API
-              var n = appfileNew.lastIndexOf("}");
-              console.log('lastIndexOf }: ' + n);
-              appfileNew = insert(appfileNew, n - 1, onCreateMethod);
+              console.log('Error MainReactPackage does not exist.');
             }
-
-            // add onChange method
-            var lastchar = appfileNew.lastIndexOf("}");
-            console.log('lastchar: ' + n);
-
-            appfileNew = insert(appfileNew, lastchar - 1, onChangeMethod);
-
-            fs.writeFileSync(mainApplicationPath, appfileNew, 'utf8');
-
-            // const appFileNew2 = fs.readFileSync(mainApplicationPath, 'utf8')
-            updateManifestFile(manifestPath, applicationClassName);
-            // update configuration file
-            const stringsXmlPath = findStringsXml(sourceDir);
-            console.log('stringsXmlPath: ' + stringsXmlPath);
-            if (stringsXmlPath != null) {
-              updateConfigurationFile(stringsXmlPath);
-            }
-          } else {
-            console.log('Error MainReactPackage does not exist.');
           }
         } else {
           console.log('SmiSdkReactPackage already exist.');
